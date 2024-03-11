@@ -9,6 +9,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -28,8 +29,13 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 
@@ -50,6 +56,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean pendingNewline = false;
     private String newline = TextUtil.newline_crlf;
 
+    private static final String FILE_TYPE_CSV = "csv";
+
+    private static final int REQUEST_STORAGE_PERMISSION = 1;
+
+
     /*
      * Lifecycle
      */
@@ -59,7 +70,14 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         setHasOptionsMenu(true);
         setRetainInstance(true);
         deviceAddress = getArguments().getString("device");
+//
+//        // Request write permission to external storage
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+//        }
     }
+
+
 
     @Override
     public void onDestroy() {
@@ -140,6 +158,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         View sendBtn = view.findViewById(R.id.send_btn);
         sendBtn.setOnClickListener(v -> send(sendText.getText().toString()));
+
         return view;
     }
 
@@ -192,10 +211,41 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 }
             }
             return true;
-        } else {
+        } else if (id == R.id.save_data) {
+                // Permission is granted, save data
+                String dataToSave = receiveText.getText().toString();
+                saveDataToFile(dataToSave, FILE_TYPE_CSV);
+                Toast.makeText(getActivity(), "Data saved successfully", Toast.LENGTH_SHORT).show();
+            return true;
+        }else {
             return super.onOptionsItemSelected(item);
         }
     }
+
+//    private void saveData() {
+//        // Get received data from TextView
+//        String receivedData = receiveText.getText().toString();
+//
+//        // Example: Save data to a CSV file
+//        File csvFile = new File(getContext().getFilesDir(), "received_data.csv");
+//        try {
+//            FileWriter writer = new FileWriter(csvFile);
+//            writer.write(receivedData); // Write the received data directly to the CSV file
+//            writer.flush();
+//            writer.close();
+//            // Provide feedback to the user
+//            Toast.makeText(getContext(), "Data saved successfully as CSV file", Toast.LENGTH_SHORT).show();
+//        } catch (IOException e) {
+//            // Handle error
+//            e.printStackTrace();
+//            Toast.makeText(getContext(), "Error saving data", Toast.LENGTH_SHORT).show();
+//        }
+//
+//        // Alternatively, you can save the data to a TXT file
+//        // File txtFile = new File(getContext().getFilesDir(), "received_data.txt");
+//        // ... Similar logic as above
+//    }
+
 
     /*
      * Serial + UI
@@ -317,8 +367,15 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         ArrayDeque<byte[]> datas = new ArrayDeque<>();
         datas.add(data);
         receive(datas);
-    }
+        // Convert byte[] data to String
+        String receivedData = new String(data);
 
+        // Save received data to file
+        saveDataToFile(receivedData, FILE_TYPE_CSV);
+    }
+    private void saveDataToFile(String data, String fileType) {
+        DataFileWriter.saveDataToFile(data, fileType);
+    }
     public void onSerialRead(ArrayDeque<byte[]> datas) {
         receive(datas);
     }
@@ -328,5 +385,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         status("connection lost: " + e.getMessage());
         disconnect();
     }
+
+
 
 }

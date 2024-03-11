@@ -20,4 +20,10 @@
         android:title="Notification if App in background"
         android:checkable="true"
         app:showAsAction="never" />
+    <!-- Add the Save Data menu item -->
+    <item
+        android:id="@+id/save_data"
+        android:title="Save Data"/>
+
 </menu>
+
